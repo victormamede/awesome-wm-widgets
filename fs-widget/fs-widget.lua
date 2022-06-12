@@ -18,18 +18,18 @@ config.refresh_rate = 60
 
 -- wibar widget
 config.widget_width = 40
-config.widget_bar_color = '#aaaaaa'
-config.widget_onclick_bg = '#ff0000'
-config.widget_border_color = '#535d6c66'
-config.widget_background_color = '#22222233'
+config.widget_bar_color = beautiful.fg_normal
+config.widget_onclick_bg = beautiful.fg_focus
+config.widget_border_color = beautiful.fg_normal
+config.widget_background_color = beautiful.bg_normal
 
 -- popup
-config.popup_bg = '#22222233'
-config.popup_border_width = 1
-config.popup_border_color = '#535d6c66'
-config.popup_bar_color = '#aaaaaa'
-config.popup_bar_background_color = '#22222233'
-config.popup_bar_border_color = '#535d6c66'
+config.popup_bg = beautiful.bg_normal
+config.popup_border_width = beautiful.border_width
+config.popup_border_color = beautiful.border_normal
+config.popup_bar_color = beautiful.fg_normal
+config.popup_bar_background_color = beautiful.bg_normal
+config.popup_bar_border_color = beautiful.border_normal
 
 local function worker(user_args)
     local args = user_args or {}
@@ -93,8 +93,6 @@ local function worker(user_args)
         ontop = true,
         visible = false,
         shape = gears.shape.rounded_rect,
-        border_width = _config.popup_border_width,
-        border_color = _config.popup_border_color,
         maximum_width = 400,
         offset = { y = 5 },
         widget = {}
