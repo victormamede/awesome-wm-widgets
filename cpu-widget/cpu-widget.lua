@@ -39,7 +39,7 @@ local function split(string_to_split, separator)
     if separator == nil then separator = "%s" end
     local t = {}
 
-    for str in string.gmatch(string_to_split, "([^".. separator .."]+)") do
+    for str in string.gmatch(string_to_split, "([^" .. separator .. "]+)") do
         table.insert(t, str)
     end
 
@@ -51,9 +51,8 @@ local function starts_with(str, start)
     return str:sub(1, #start) == start
 end
 
-
 local function create_textbox(args)
-    return wibox.widget{
+    return wibox.widget {
         text = args.text,
         align = args.align or 'left',
         markup = args.markup,
@@ -63,16 +62,16 @@ local function create_textbox(args)
 end
 
 local function create_process_header(params)
-    local res = wibox.widget{
-        create_textbox{markup = '<b>PID</b>'},
-        create_textbox{markup = '<b>Name</b>'},
+    local res = wibox.widget {
+        create_textbox { markup = '<b>PID</b>' },
+        create_textbox { markup = '<b>Name</b>' },
         {
-            create_textbox{markup = '<b>%CPU</b>'},
-            create_textbox{markup = '<b>%MEM</b>'},
-            params.with_action_column and create_textbox{forced_width = 20} or nil,
+            create_textbox { markup = '<b>%CPU</b>' },
+            create_textbox { markup = '<b>%MEM</b>' },
+            params.with_action_column and create_textbox { forced_width = 20 } or nil,
             layout = wibox.layout.align.horizontal
         },
-        layout  = wibox.layout.ratio.horizontal
+        layout = wibox.layout.ratio.horizontal
     }
     res:ajust_ratio(2, 0.2, 0.47, 0.33)
 
@@ -80,7 +79,7 @@ local function create_process_header(params)
 end
 
 local function create_kill_process_button()
-    return wibox.widget{
+    return wibox.widget {
         {
             id = "icon",
             image = WIDGET_DIR .. '/window-close-symbolic.svg',
@@ -123,10 +122,10 @@ local function worker(user_args)
         timeout = timeout
     }
 
-    local popup = awful.popup{
+    local popup = awful.popup {
         ontop = true,
         visible = false,
-        shape = gears.shape.rounded_rect,
+        shape = gears.shape.rect,
         border_width = 1,
         border_color = beautiful.bg_normal,
         maximum_width = 300,
@@ -139,28 +138,28 @@ local function worker(user_args)
     popup:connect_signal("mouse::leave", function() is_update = true end)
 
     cpugraph_widget:buttons(
-            awful.util.table.join(
-                    awful.button({}, 1, function()
-                        if popup.visible then
-                            popup.visible = not popup.visible
-                            -- When the popup is not visible, stop the timer
-                            popup_timer:stop()
-                        else
-                            popup:move_next_to(mouse.current_widget_geometry)
-                            -- Restart the timer, when the popup becomes visible
-                            -- Emit the signal to start the timer directly and not wait the timeout first
-                            popup_timer:start()
-                            popup_timer:emit_signal("timeout")
-                        end
-                    end)
-            )
+        awful.util.table.join(
+            awful.button({}, 1, function()
+                if popup.visible then
+                    popup.visible = not popup.visible
+                    -- When the popup is not visible, stop the timer
+                    popup_timer:stop()
+                else
+                    popup:move_next_to()
+                    -- Restart the timer, when the popup becomes visible
+                    -- Emit the signal to start the timer directly and not wait the timeout first
+                    popup_timer:start()
+                    popup_timer:emit_signal("timeout")
+                end
+            end)
+        )
     )
 
     --- By default graph widget goes from left to right, so we mirror it and push up a bit
     cpu_widget = wibox.widget {
         {
             cpugraph_widget,
-            reflection = {horizontal = true},
+            reflection = { horizontal = true },
             layout = wibox.container.mirror
         },
         bottom = 2,
@@ -174,7 +173,7 @@ local function worker(user_args)
     watch(CMD_slim, timeout, function(widget, stdout)
 
         local _, user, nice, system, idle, iowait, irq, softirq, steal, _, _ =
-            stdout:match('(%w+)%s+(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)')
+        stdout:match('(%w+)%s+(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)')
 
         local total = user + nice + system + idle + iowait + irq + softirq + steal
 
@@ -187,7 +186,7 @@ local function worker(user_args)
 
         widget:add_value(diff_usage)
     end,
-    cpugraph_widget
+        cpugraph_widget
     )
 
     -- This part runs whenever the timer is fired.
@@ -203,7 +202,7 @@ local function worker(user_args)
                     if cpus[i] == nil then cpus[i] = {} end
 
                     local name, user, nice, system, idle, iowait, irq, softirq, steal, _, _ =
-                        line:match('(%w+)%s+(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)')
+                    line:match('(%w+)%s+(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)')
 
                     local total = user + nice + system + idle + iowait + irq + softirq + steal
 
@@ -216,8 +215,8 @@ local function worker(user_args)
 
                     local row = wibox.widget
                     {
-                        create_textbox{text = name},
-                        create_textbox{text = math.floor(diff_usage) .. '%'},
+                        create_textbox { text = name },
+                        create_textbox { text = math.floor(diff_usage) .. '%' },
                         {
                             max_value = 100,
                             value = diff_usage,
@@ -234,7 +233,7 @@ local function worker(user_args)
                             widget = wibox.widget.progressbar,
 
                         },
-                        layout  = wibox.layout.ratio.horizontal
+                        layout = wibox.layout.ratio.horizontal
                     }
                     row:ajust_ratio(2, 0.15, 0.15, 0.7)
                     cpu_rows[i] = row
@@ -252,16 +251,16 @@ local function worker(user_args)
 
                         local kill_proccess_button = enable_kill_button and create_kill_process_button() or nil
 
-                        local pid_name_rest = wibox.widget{
-                            create_textbox{text = pid},
-                            create_textbox{text = comm},
+                        local pid_name_rest = wibox.widget {
+                            create_textbox { text = pid },
+                            create_textbox { text = comm },
                             {
-                                create_textbox{text = cpu, align = 'center'},
-                                create_textbox{text = mem, align = 'center'},
+                                create_textbox { text = cpu, align = 'center' },
+                                create_textbox { text = mem, align = 'center' },
                                 kill_proccess_button,
                                 layout = wibox.layout.fixed.horizontal
                             },
-                            layout  = wibox.layout.ratio.horizontal
+                            layout = wibox.layout.ratio.horizontal
                         }
                         pid_name_rest:ajust_ratio(2, 0.2, 0.47, 0.33)
 
@@ -283,16 +282,16 @@ local function worker(user_args)
                             row:connect_signal("mouse::leave", function() kill_proccess_button.icon.opacity = 0.1 end)
 
                             kill_proccess_button:buttons(
-                                awful.util.table.join( awful.button({}, 1, function()
+                                awful.util.table.join(awful.button({}, 1, function()
                                     row:set_bg('#ff0000')
                                     awful.spawn.with_shell('kill -9 ' .. pid)
-                                end) ) )
+                                end)))
                         end
 
                         awful.tooltip {
                             objects = { row },
                             mode = 'outside',
-                            preferred_positions = {'bottom'},
+                            preferred_positions = { 'bottom' },
                             timer_function = function()
                                 local text = cmd
                                 if process_info_max_length > 0 and text:len() > process_info_max_length then
@@ -300,8 +299,8 @@ local function worker(user_args)
                                 end
 
                                 return text
-                                        :gsub('%s%-', '\n\t-') -- put arguments on a new line
-                                        :gsub(':/', '\n\t\t:/') -- java classpath uses : to separate jars
+                                    :gsub('%s%-', '\n\t-')-- put arguments on a new line
+                                    :gsub(':/', '\n\t\t:/') -- java classpath uses : to separate jars
                             end,
                         }
 
@@ -321,7 +320,7 @@ local function worker(user_args)
                         color = beautiful.bg_focus,
                         widget = wibox.widget.separator
                     },
-                    create_process_header{with_action_column = enable_kill_button},
+                    create_process_header { with_action_column = enable_kill_button },
                     process_rows,
                     layout = wibox.layout.fixed.vertical,
                 },

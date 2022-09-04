@@ -14,6 +14,7 @@ local watch = require("awful.widget.watch")
 local spawn = require("awful.spawn")
 local naughty = require("naughty")
 local beautiful = require("beautiful")
+local gears = require("gears")
 
 local ICON_DIR = os.getenv("HOME") .. '/.config/awesome/awesome-wm-widgets/brightness-widget/'
 local get_brightness_cmd
@@ -24,10 +25,11 @@ local dec_brightness_cmd
 local brightness_widget = {}
 
 local function show_warning(message)
-    naughty.notify{
+    naughty.notify {
         preset = naughty.config.presets.critical,
         title = 'Brightness Widget',
-        text = message}
+        text = message
+    }
 end
 
 local function worker(user_args)
@@ -69,7 +71,7 @@ local function worker(user_args)
         brightness_widget.widget = wibox.widget {
             {
                 {
-                    image = path_to_icon,
+                    image = gears.color.recolor_image(path_to_icon, beautiful.fg_normal),
                     resize = false,
                     widget = wibox.widget.imagebox,
                 },
@@ -95,7 +97,7 @@ local function worker(user_args)
         brightness_widget.widget = wibox.widget {
             {
                 {
-                    image = path_to_icon,
+                    image = gears.color.recolor_image(path_to_icon, beautiful.fg_normal),
                     resize = true,
                     widget = wibox.widget.imagebox,
                 },
@@ -133,6 +135,7 @@ local function worker(user_args)
             end)
         end)
     end
+
     local old_level = 0
     function brightness_widget:toggle()
         if old_level < 0.1 then
@@ -149,6 +152,7 @@ local function worker(user_args)
         end
         brightness_widget:set(current_level)
     end
+
     function brightness_widget:inc()
         spawn.easy_async(inc_brightness_cmd, function()
             spawn.easy_async(get_brightness_cmd, function(out)
@@ -156,6 +160,7 @@ local function worker(user_args)
             end)
         end)
     end
+
     function brightness_widget:dec()
         spawn.easy_async(dec_brightness_cmd, function()
             spawn.easy_async(get_brightness_cmd, function(out)
@@ -165,14 +170,19 @@ local function worker(user_args)
     end
 
     brightness_widget.widget:buttons(
-            awful.util.table.join(
-                    awful.button({}, 1, function() brightness_widget:set(base) end),
-                    awful.button({}, 3, function() brightness_widget:toggle() end),
-                    awful.button({}, 4, function() brightness_widget:inc() end),
-                    awful.button({}, 5, function() brightness_widget:dec() end)
-            )
+        awful.util.table.join(
+            awful.button({}, 1, function() brightness_widget:set(base) end),
+            awful.button({}, 3, function() brightness_widget:toggle() end),
+            awful.button({}, 4, function() brightness_widget:inc() end),
+            awful.button({}, 5, function() brightness_widget:dec() end)
+        )
     )
 
+    awesome.connect_signal('brightness_change', function()
+        spawn.easy_async(get_brightness_cmd, function(out)
+            update_widget(brightness_widget.widget, out)
+        end)
+    end)
     watch(get_brightness_cmd, timeout, update_widget, brightness_widget.widget)
 
     if tooltip then

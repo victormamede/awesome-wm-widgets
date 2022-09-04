@@ -18,10 +18,12 @@ local utils = require("awesome-wm-widgets.volume-widget.utils")
 
 local LIST_DEVICES_CMD = [[sh -c "pacmd list-sinks; pacmd list-sources"]]
 local function GET_VOLUME_CMD(device) return 'amixer -D ' .. device .. ' sget Master' end
-local function INC_VOLUME_CMD(device, step) return 'amixer -D ' .. device .. ' sset Master ' .. step .. '%+' end
-local function DEC_VOLUME_CMD(device, step) return 'amixer -D ' .. device .. ' sset Master ' .. step .. '%-' end
-local function TOG_VOLUME_CMD(device) return 'amixer -D ' .. device .. ' sset Master toggle' end
 
+local function INC_VOLUME_CMD(device, step) return 'amixer -D ' .. device .. ' sset Master ' .. step .. '%+' end
+
+local function DEC_VOLUME_CMD(device, step) return 'amixer -D ' .. device .. ' sset Master ' .. step .. '%-' end
+
+local function TOG_VOLUME_CMD(device) return 'amixer -D ' .. device .. ' sset Master toggle' end
 
 local widget_types = {
     icon_and_text = require("awesome-wm-widgets.volume-widget.widgets.icon-and-text-widget"),
@@ -32,9 +34,9 @@ local widget_types = {
 }
 local volume = {}
 
-local rows  = { layout = wibox.layout.fixed.vertical }
+local rows = { layout = wibox.layout.fixed.vertical }
 
-local popup = awful.popup{
+local popup = awful.popup {
     bg = beautiful.bg_normal,
     ontop = true,
     visible = false,
@@ -55,7 +57,7 @@ local function build_main_line(device)
 end
 
 local function build_rows(devices, on_checkbox_click, device_type)
-    local device_rows  = { layout = wibox.layout.fixed.vertical }
+    local device_rows = { layout = wibox.layout.fixed.vertical }
     for _, device in pairs(devices) do
 
         local checkbox = wibox.widget {
@@ -131,7 +133,7 @@ local function build_rows(devices, on_checkbox_click, device_type)
 end
 
 local function build_header_row(text)
-    return wibox.widget{
+    return wibox.widget {
         {
             markup = "<b>" .. text .. "</b>",
             align = 'center',
@@ -147,7 +149,7 @@ local function rebuild_popup()
 
         local sinks, sources = utils.extract_sinks_and_sources(stdout)
 
-        for i = 0, #rows do rows[i]=nil end
+        for i = 0, #rows do rows[i] = nil end
 
         table.insert(rows, build_header_row("SINKS"))
         table.insert(rows, build_rows(sinks, function() rebuild_popup() end, "sink"))
@@ -157,7 +159,6 @@ local function rebuild_popup()
         popup:setup(rows)
     end)
 end
-
 
 local function worker(user_args)
 
@@ -176,7 +177,7 @@ local function worker(user_args)
     end
 
     local function update_graphic(widget, stdout)
-        local mute = string.match(stdout, "%[(o%D%D?)%]")   -- \[(o\D\D?)\] - [on] or [off]
+        local mute = string.match(stdout, "%[(o%D%D?)%]") -- \[(o\D\D?)\] - [on] or [off]
         if mute == 'off' then widget:mute()
         elseif mute == 'on' then widget:unmute()
         end
@@ -204,22 +205,23 @@ local function worker(user_args)
     end
 
     volume.widget:buttons(
-            awful.util.table.join(
-                    awful.button({}, 3, function()
-                        if popup.visible then
-                            popup.visible = not popup.visible
-                        else
-                            rebuild_popup()
-                            popup:move_next_to(mouse.current_widget_geometry)
-                        end
-                    end),
-                    awful.button({}, 4, function() volume:inc() end),
-                    awful.button({}, 5, function() volume:dec() end),
-                    awful.button({}, 2, function() volume:mixer() end),
-                    awful.button({}, 1, function() volume:toggle() end)
-            )
+        awful.util.table.join(
+            awful.button({}, 3, function()
+                if popup.visible then
+                    popup.visible = not popup.visible
+                else
+                    rebuild_popup()
+                    popup:move_next_to(mouse.current_widget_geometry)
+                end
+            end),
+            awful.button({}, 5, function() volume:inc() end),
+            awful.button({}, 4, function() volume:dec() end),
+            awful.button({}, 2, function() volume:mixer() end),
+            awful.button({}, 1, function() volume:toggle() end)
+        )
     )
 
+    awesome.connect_signal('volume_change', function(stdout) update_graphic(volume.widget, stdout) end)
     watch(GET_VOLUME_CMD(device), refresh_rate, update_graphic, volume.widget)
 
     return volume.widget

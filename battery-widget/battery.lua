@@ -12,8 +12,10 @@ local awful = require("awful")
 local naughty = require("naughty")
 local watch = require("awful.widget.watch")
 local wibox = require("wibox")
+local gears = require("gears")
 local gfs = require("gears.filesystem")
-local dpi = require('beautiful').xresources.apply_dpi
+local beautiful = require('beautiful')
+local dpi = beautiful.xresources.apply_dpi
 
 -- acpi sample outputs
 -- Battery 0: Discharging, 75%, 01:51:38 remaining
@@ -47,16 +49,18 @@ local function worker(user_args)
     end
 
     if not gfs.dir_readable(path_to_icons) then
-        naughty.notify{
+        naughty.notify {
             title = "Battery Widget",
             text = "Folder with icons doesn't exist: " .. path_to_icons,
             preset = naughty.config.presets.critical
         }
     end
 
+    local stylesheet = ""
     local icon_widget = wibox.widget {
         {
             id = "icon",
+            stylesheet = stylesheet,
             widget = wibox.widget.imagebox,
             resize = false
         },
@@ -78,19 +82,19 @@ local function worker(user_args)
     local notification
     local function show_battery_status(batteryType)
         awful.spawn.easy_async([[bash -c 'acpi']],
-        function(stdout, _, _, _)
-            naughty.destroy(notification)
-            notification = naughty.notify{
-                text =  stdout,
-                title = "Battery status",
-                icon = path_to_icons .. batteryType .. ".svg",
-                icon_size = dpi(16),
-                position = position,
-                timeout = 5, hover_timeout = 0.5,
-                width = 200,
-                screen = mouse.screen
-            }
-        end
+            function(stdout, _, _, _)
+                naughty.destroy(notification)
+                notification = naughty.notify {
+                    text = stdout,
+                    title = "Battery status",
+                    icon = path_to_icons .. batteryType .. ".svg",
+                    icon_size = dpi(16),
+                    position = position,
+                    timeout = 5, hover_timeout = 0.5,
+                    width = 200,
+                    screen = mouse.screen
+                }
+            end
         )
     end
 
@@ -111,84 +115,87 @@ local function worker(user_args)
             timeout = 25, -- show the warning for a longer time
             hover_timeout = 0.5,
             position = warning_msg_position,
-            bg = "#F06060",
-            fg = "#EEE9EF",
+            bg = beautiful.bg_normal,
+            fg = beautiful.fg_normal,
             width = 300,
             screen = mouse.screen
         }
     end
+
     local last_battery_check = os.time()
     local batteryType = "battery-good-symbolic"
 
     watch("acpi -i", timeout,
-    function(widget, stdout)
-        local battery_info = {}
-        local capacities = {}
-        for s in stdout:gmatch("[^\r\n]+") do
-            local status, charge_str, _ = string.match(s, '.+: ([%a%s]+), (%d?%d?%d)%%,?(.*)')
-            if status ~= nil then
-                table.insert(battery_info, {status = status, charge = tonumber(charge_str)})
-            else
-                local cap_str = string.match(s, '.+:.+last full capacity (%d+)')
-                table.insert(capacities, tonumber(cap_str))
-            end
-        end
-
-        local capacity = 0
-        for _, cap in ipairs(capacities) do
-            capacity = capacity + cap
-        end
-
-        local charge = 0
-        local status
-        for i, batt in ipairs(battery_info) do
-            if capacities[i] ~= nil then
-                if batt.charge >= charge then
-                    status = batt.status -- use most charged battery status
-                    -- this is arbitrary, and maybe another metric should be used
+        function(widget, stdout)
+            local battery_info = {}
+            local capacities = {}
+            for s in stdout:gmatch("[^\r\n]+") do
+                local status, charge_str, _ = string.match(s, '.+: ([%a%s]+), (%d?%d?%d)%%,?(.*)')
+                if status ~= nil then
+                    table.insert(battery_info, { status = status, charge = tonumber(charge_str) })
+                else
+                    local cap_str = string.match(s, '.+:.+last full capacity (%d+)')
+                    table.insert(capacities, tonumber(cap_str))
                 end
-
-                charge = charge + batt.charge * capacities[i]
             end
-        end
-        charge = charge / capacity
 
-        if show_current_level then
-            level_widget.text = string.format('%d%%', charge)
-        end
-
-        if (charge >= 1 and charge < 15) then
-            batteryType = "battery-empty%s-symbolic"
-            if enable_battery_warning and status ~= 'Charging' and os.difftime(os.time(), last_battery_check) > 300 then
-                -- if 5 minutes have elapsed since the last warning
-                last_battery_check = os.time()
-
-                show_battery_warning()
+            local capacity = 0
+            for _, cap in ipairs(capacities) do
+                capacity = capacity + cap
             end
-        elseif (charge >= 15 and charge < 40) then batteryType = "battery-caution%s-symbolic"
-        elseif (charge >= 40 and charge < 60) then batteryType = "battery-low%s-symbolic"
-        elseif (charge >= 60 and charge < 80) then batteryType = "battery-good%s-symbolic"
-        elseif (charge >= 80 and charge <= 100) then batteryType = "battery-full%s-symbolic"
-        end
 
-        if status == 'Charging' then
-            batteryType = string.format(batteryType, '-charging')
-        else
-            batteryType = string.format(batteryType, '')
-        end
+            local charge = 0
+            local status
+            for i, batt in ipairs(battery_info) do
+                if capacities[i] ~= nil then
+                    if batt.charge >= charge then
+                        status = batt.status -- use most charged battery status
+                        -- this is arbitrary, and maybe another metric should be used
+                    end
 
-        widget.icon:set_image(path_to_icons .. batteryType .. ".svg")
+                    charge = charge + batt.charge * capacities[i]
+                end
+            end
+            charge = charge / capacity
 
-        -- Update popup text
-        -- battery_popup.text = string.gsub(stdout, "\n$", "")
-    end,
-    icon_widget)
+            if show_current_level then
+                level_widget.text = string.format('%d%%', charge)
+            end
+
+            if (charge >= 1 and charge < 15) then
+                batteryType = "battery-empty%s-symbolic"
+                if enable_battery_warning and status ~= 'Charging' and os.difftime(os.time(), last_battery_check) > 300 then
+                    -- if 5 minutes have elapsed since the last warning
+                    last_battery_check = os.time()
+
+                    show_battery_warning()
+                end
+            elseif (charge >= 15 and charge < 40) then batteryType = "battery-caution%s-symbolic"
+            elseif (charge >= 40 and charge < 60) then batteryType = "battery-low%s-symbolic"
+            elseif (charge >= 60 and charge < 80) then batteryType = "battery-good%s-symbolic"
+            elseif (charge >= 80 and charge <= 100) then batteryType = "battery-full%s-symbolic"
+            end
+
+            if status == 'Charging' then
+                batteryType = string.format(batteryType, '-charging')
+            else
+                batteryType = string.format(batteryType, '')
+            end
+
+            widget.icon:set_image(gears.color.recolor_image(path_to_icons .. batteryType .. ".svg",
+                beautiful.fg_normal))
+
+
+            -- Update popup text
+            -- battery_popup.text = string.gsub(stdout, "\n$", "")
+        end,
+        icon_widget)
 
     if display_notification then
         battery_widget:connect_signal("mouse::enter", function() show_battery_status(batteryType) end)
         battery_widget:connect_signal("mouse::leave", function() naughty.destroy(notification) end)
     elseif display_notification_onClick then
-        battery_widget:connect_signal("button::press", function(_,_,_,button)
+        battery_widget:connect_signal("button::press", function(_, _, _, button)
             if (button == 3) then show_battery_status(batteryType) end
         end)
         battery_widget:connect_signal("mouse::leave", function() naughty.destroy(notification) end)
